@@ -1,0 +1,94 @@
+import React, { useState } from 'react';
+import OpenAI from 'openai';
+import './Game.css';
+
+const key_env = process.env.REACT_APP_OPENAI_API_KEY;
+const openai = new OpenAI({
+  apiKey: key_env,
+  dangerouslyAllowBrowser: true // TODO: Remove this line when deploying to production
+});
+
+
+
+
+const Game = () => {
+  const [step, setStep] = useState(1);
+  const [setting, setSetting] = useState('');
+  const [character, setCharacter] = useState('');
+  const [story, setStory] = useState('');
+
+  const handleSettingSelect = (selectedSetting) => {
+    setSetting(selectedSetting);
+    setStep(2);
+  };
+
+  const handleCharacterSelect = async (selectedCharacter) => {
+    setCharacter(selectedCharacter);
+   // const response = await sendApiCall(setting, selectedCharacter);
+    setStory(response);
+    setStep(3);
+  };
+
+  
+  async function sendApiCall ()  {
+    // if (!setting || !character) {
+    //   return;
+    // }
+    let setting = 'Fantasy';
+    let character = 'Warrior';
+    
+    console.log('Setting: ', setting, ' Character: ', character);
+    const prompt = `Setting: ${setting}, Character: ${character}. Start the story.`;
+  
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        prompt: prompt,
+        max_tokens: 150,
+      });
+      console.log('OpenAI response:', prompt, ' resp:' , response.choices[0].text);
+      return response.choices[0].text;
+    } catch (error) {
+      console.error('Error fetching data from OpenAI:', error);
+      return 'An error occurred while fetching the story.';
+    }
+  };
+  
+
+  return (
+    <div className="game-container">
+      <input type="button" value="ChatGPT" onClick={sendApiCall} />
+
+      {step === 1 && (
+        <div className="selection-screen">
+          <h1>What is your preferred setting?</h1>
+          <ul>
+            <li onClick={() => handleSettingSelect('Fantasy')}>Fantasy</li>
+            <li onClick={() => handleSettingSelect('Mystery')}>Mystery</li>
+            <li onClick={() => handleSettingSelect('Post-Apocalyptic')}>Post-Apocalyptic</li>
+            <li onClick={() => handleSettingSelect('Supernatural')}>Supernatural</li>
+            <li onClick={() => handleSettingSelect('Sci-Fi')}>Sci-Fi</li>
+          </ul>
+        </div>
+      )}
+      {step === 2 && (
+        <div className="selection-screen">
+          <h1>What character do you choose?</h1>
+          <ul>
+            <li onClick={() => handleCharacterSelect('Warrior')}>Warrior</li>
+            <li onClick={() => handleCharacterSelect('Mage')}>Mage</li>
+            <li onClick={() => handleCharacterSelect('Rogue')}>Rogue</li>
+          </ul>
+        </div>
+      )}
+      {step === 3 && (
+        <div className="story-screen">
+          <h1>Your Adventure Begins</h1>
+          <p>{story}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Game;

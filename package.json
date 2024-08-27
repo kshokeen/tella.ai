@@ -1,0 +1,20 @@
+{
+  "name": "tella.ai",
+  "version": "1.0.0",
+  "description": "A basic web app using React",
+  "scripts": {
+    "start": "cd frontend && npm start",
+    "build": "cd frontend && npm run build",
+    "install": "cd frontend && npm install"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "devDependencies": {
+    "sass": "^1.77.8"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.17.1"
+  }
+}
