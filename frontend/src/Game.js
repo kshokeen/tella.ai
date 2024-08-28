@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import './Game.css';
 
-const key_env = 'AIzaSyDJAKC5gmzJB2ZyQnleURhA0RyILG1n-S4';
+const key_env = 'AIzaSyDJAKC5gmzJB2ZyQnleURhA0RyILG1n-S4'; 
 const genAI = new GoogleGenerativeAI(key_env);
 
-async function sendApiCall(setting, character) {
-  console.log('Google AI request:', setting, character);
-  const prompt = `Setting: ${setting}, Character: ${character}. Start the story.`;
+//API call only for the start of the story
+async function storyApiCall(setting, character, storyNote) {
+  console.log('Google AI request:', setting, character, storyNote);
+  const prompt = `Setting: ${setting}, Character: ${character}, Starting instructions: ${storyNote}.`;
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   try {
     const result = await model.generateContent(prompt);
@@ -20,12 +21,36 @@ async function sendApiCall(setting, character) {
   }
 }
 
+// API call needed to be used for the rest of the Game
+// it need to send the action and text, and the story needs to be remembered
+async function playerApiCall(instruction, note) {
+  console.log('Google AI request:', instruction, note);
+  const prompt = `instruction: ${instruction}, note: ${note}.`;
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  try {
+    const result = await model.generateContent(prompt);
+    const responseText = await result.response.text();
+    console.log('Google AI response:', prompt, ' resp:', responseText);
+    return responseText;
+  } catch (error) {
+    console.error('Error fetching data from Google AI:', error);
+    return 'An error occurred while fetching the story.';
+  }
+}
+
+
+
 const Game = () => {
   const [step, setStep] = useState(1);
   const [setting, setSetting] = useState('');
   const [character, setCharacter] = useState('');
+  // const [action, setAction] = useState('');
+  const [instruction, setInstruction] = useState('');
+  const [accumulatedStory, setAccumulatedStory] = useState('');
   const [story, setStory] = useState('');
   const [error, setError] = useState('');
+  const note = 'Can you continue creating a text baised adventure game. The instruction are what the player decides to do next. If you are missign any info, you can make it up as you see fit, just make sure it follows and fits in the story.';
+  const storyNote = 'Create a captivating opening scene for a second-person text adventure. Introduce the player as a [character] in a [setting] world. Provide a brief description of their surroundings, possessions, and a compelling reason for their presence there. Keep the text concise and engaging.';
 
   const handleSettingSelect = (selectedSetting) => {
     setSetting(selectedSetting);
@@ -34,15 +59,16 @@ const Game = () => {
 
   const handleCharacterSelect = async (selectedCharacter) => {
     setCharacter(selectedCharacter);
-  
-    if (!setting) {
-      setError('Please select a setting first.');
+    
+    if (!character) {
+      //setError('Please select a setting first.');
       return;
     }
   
     try {
-      const response = await sendApiCall(setting, character);
+      const response = await storyApiCall(setting, character, storyNote);
       setStory(response);
+      setAccumulatedStory(response); 
       setStep(3);
     } catch (error) {
       if (error.status === 429) {
@@ -54,9 +80,9 @@ const Game = () => {
       }
     }
   };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const action = event.target.action.value;
     const instruction = event.target.instruction.value;
   
     if (instruction.trim() === '') {
@@ -64,28 +90,13 @@ const Game = () => {
       return;
     }
   
-    const playerText = `${action.toUpperCase()}: ${instruction}`;
-    const newStory = `${story}\n${playerText}`;
-    setStory(newStory);
-  
     try {
-      const response = await fetch('https://api.gemini.com/continue-story', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action, instruction }),
-      });
-  
-      if (!response.ok) {
-        throw new Error('Failed to continue the story');
-      }
-  
-      const data = await response.json();
-      setStory((prevStory) => `${prevStory}\n${data.continuation}`);
+      const response = await playerApiCall(accumulatedStory, instruction);
+      setStory(response);
+      setAccumulatedStory(prev => `${prev}\n${instruction}\n${response}`);
+      setInstruction('');
     } catch (error) {
-      setError('An error occurred while continuing the story.');
-      console.error('Error continuing the story:', error);
+      console.error('Error fetching data from Google AI:', error);
     }
   
     event.target.reset();
@@ -122,18 +133,14 @@ const Game = () => {
         <h1>Your Adventure Begins</h1>
         <p>{story}</p>
         <form onSubmit={handleSubmit} className="action-bar">
-          <select name="action" className="action-dropdown">
-            <option value="do">Do</option>
-            <option value="see">See</option>
-            <option value="move">Move</option>
-            <option value="story">Story</option>
-          </select>
           <input
             type="text"
             name="instruction"
             className="instruction-input"
             maxLength="150"
             placeholder="Enter your instruction"
+            value={instruction}
+            onChange={(e) => setInstruction(e.target.value)}
           />
           <button type="submit" className="submit-button">Submit</button>
         </form>
