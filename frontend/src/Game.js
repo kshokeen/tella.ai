@@ -43,14 +43,16 @@ async function playerApiCall(instruction, note) {
 const Game = () => {
   const [step, setStep] = useState(1);
   const [setting, setSetting] = useState('');
-  const [character, setCharacter] = useState('');
-  // const [action, setAction] = useState('');
+  const [character, setCharacter] = useState(''); 
   const [instruction, setInstruction] = useState('');
-  const [accumulatedStory, setAccumulatedStory] = useState('');
+  const [latestStory, setlatestStory] = useState('');
   const [story, setStory] = useState('');
   const [error, setError] = useState('');
-  const note = 'Can you continue creating a text baised adventure game. The instruction are what the player decides to do next. If you are missign any info, you can make it up as you see fit, just make sure it follows and fits in the story.';
-  const storyNote = 'Create a captivating opening scene for a second-person text adventure. Introduce the player as a [character] in a [setting] world. Provide a brief description of their surroundings, possessions, and a compelling reason for their presence there. Keep the text concise and engaging.';
+  const note = `Continue the game, following the player's choice. If necessary, add details to fit the story. Keep responses concise`;
+  const storyNote = `Create a captivating opening scene for a second-person text adventure. 
+  Introduce the player as a [character] in a [setting] world. 
+  Provide a brief description of their surroundings, possessions, and a compelling reason for their presence there. 
+  Keep the text concise and engaging.`;
 
   const handleSettingSelect = (selectedSetting) => {
     setSetting(selectedSetting);
@@ -60,15 +62,15 @@ const Game = () => {
   const handleCharacterSelect = async (selectedCharacter) => {
     setCharacter(selectedCharacter);
     
-    if (!character) {
-      //setError('Please select a setting first.');
-      return;
-    }
+    // if (!character) {
+    //   //setError('Please select a setting first.');
+    //   return;
+    // }
   
     try {
       const response = await storyApiCall(setting, character, storyNote);
-      setStory(response);
-      setAccumulatedStory(response); 
+      setStory(prevStory => prevStory + `\n ${response}`);
+      setlatestStory(response); 
       setStep(3);
     } catch (error) {
       if (error.status === 429) {
@@ -91,9 +93,9 @@ const Game = () => {
     }
   
     try {
-      const response = await playerApiCall(accumulatedStory, instruction);
-      setStory(response);
-      setAccumulatedStory(prev => `${prev}\n${instruction}\n${response}`);
+      const response = await playerApiCall(latestStory, instruction, note);
+      setStory(story => story + `\nPlayer: ${instruction} \n  \n${response}`);
+      setlatestStory(prev => `${prev}\n${instruction}\n${response}`);
       setInstruction('');
     } catch (error) {
       console.error('Error fetching data from Google AI:', error);
@@ -130,15 +132,17 @@ const Game = () => {
       )}
       {step === 3 && (
         <div className="story-screen">
-        <h1>Your Adventure Begins</h1>
-        <p>{story}</p>
+        <div className="story-container">
+          <h1>Your Adventure Begins</h1>
+          <p>{story}</p>
+        </div>
         <form onSubmit={handleSubmit} className="action-bar">
           <input
             type="text"
             name="instruction"
             className="instruction-input"
             maxLength="150"
-            placeholder="Enter your instruction"
+            placeholder="Enter your instruction here"
             value={instruction}
             onChange={(e) => setInstruction(e.target.value)}
           />
